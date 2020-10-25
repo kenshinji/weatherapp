@@ -4,6 +4,7 @@ import com.tenera.weatherapp.dto.OpenWeatherResponse;
 import com.tenera.weatherapp.dto.WeatherCondition;
 import com.tenera.weatherapp.dto.WeatherData;
 import com.tenera.weatherapp.dto.WeatherHistory;
+import com.tenera.weatherapp.repository.WeatherRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,6 +15,7 @@ import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class WeatherService {
@@ -27,6 +29,9 @@ public class WeatherService {
     @Autowired
     private RestTemplate restTemplate;
 
+    @Autowired
+    private WeatherRepository weatherRepository;
+
     public WeatherData queryCurrentWeather(String location) {
 
         UriComponents builder = UriComponentsBuilder.fromHttpUrl(url)
@@ -35,6 +40,8 @@ public class WeatherService {
                 .queryParam("appid", apiKey).build();
         ResponseEntity<OpenWeatherResponse> response = restTemplate
                 .getForEntity(builder.toUriString(), OpenWeatherResponse.class);
+
+
         double temp = Objects.requireNonNull(response.getBody()).getMain().getTemp();
         double pressure = response.getBody().getMain().getPressure();
 
@@ -45,20 +52,23 @@ public class WeatherService {
                 .findAny().orElse(null);
 
         boolean umbrella = weatherCondition != null;
-
-        return new WeatherData(temp,pressure,umbrella);
+        WeatherData weatherData = new WeatherData(temp,pressure,umbrella);
+        weatherRepository.save(weatherData);
+        return weatherData;
     }
 
     public WeatherHistory queryHistory(String location) {
 
-        // call repository to get last 5 history data
-        List<WeatherData> history = new ArrayList<>();
+        List<WeatherData> lastFiveQueries = weatherRepository.findTop5ByOrderByIdDesc()
+                .stream().collect(Collectors.toList());
 
         // Calculate avg values
-        double avgTemp = 1.0;
-        double avgPressure = 2.0;
+        double avgTemp = lastFiveQueries.stream().mapToDouble(WeatherData::getTemp)
+                .average().orElse(Double.NaN);
+        double avgPressure = lastFiveQueries.stream().mapToDouble(WeatherData::getPressure)
+                .average().orElse(Double.NaN);
 
         // set all above values to WeatherHistory
-        return new WeatherHistory(avgTemp, avgPressure, history);
+        return new WeatherHistory(avgTemp, avgPressure, lastFiveQueries);
     }
 }
