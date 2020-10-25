@@ -6,6 +6,8 @@ import com.tenera.weatherapp.dto.WeatherData;
 import com.tenera.weatherapp.dto.WeatherHistory;
 import com.tenera.weatherapp.exceptionhandler.ValidationException;
 import com.tenera.weatherapp.repository.WeatherRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -22,6 +24,8 @@ import java.util.Objects;
 @Service
 public class WeatherService {
 
+    Logger logger = LoggerFactory.getLogger(WeatherService.class);
+
     @Value("${api.key}")
     private String apiKey;
 
@@ -35,6 +39,9 @@ public class WeatherService {
     private WeatherRepository weatherRepository;
 
     public WeatherData queryCurrentWeather(String location) {
+
+        logger.debug("ENTRY : queryCurrentWeather {}", location);
+
         if(!validateInput(location)) throw new ValidationException("Bad city name for the request");
         WeatherData weatherData = null;
         try {
@@ -53,12 +60,12 @@ public class WeatherService {
             weatherData = new WeatherData(location, temp, pressure, umbrella);
             weatherRepository.save(weatherData);
         } catch (Exception e) {
+            logger.error(e.getMessage(), e);
             if (e instanceof HttpClientErrorException.NotFound) {
                 throw new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "city not found"
                 );
             }else{
-                System.out.println(e.getMessage());
                 throw new ResponseStatusException(
                         HttpStatus.INTERNAL_SERVER_ERROR, "internal server error"
                 );
@@ -68,6 +75,9 @@ public class WeatherService {
     }
 
     public WeatherHistory queryHistory(String location) {
+
+        logger.debug("ENTRY : queryHistory {}", location);
+
         if(!validateInput(location)) throw new ValidationException("Bad city name for the request");
 
         List<WeatherData> lastFiveQueries = new ArrayList<>(weatherRepository.findTop5ByLocationOrderByIdDesc(location));
