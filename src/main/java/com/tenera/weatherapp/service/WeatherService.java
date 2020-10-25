@@ -57,7 +57,8 @@ public class WeatherService {
                     .findAny().orElse(null);
 
             boolean umbrella = weatherCondition != null;
-            weatherData = new WeatherData(location, temp, pressure, umbrella);
+            // make sure same city name are all saved as lower case into the database to reduce duplications.
+            weatherData = new WeatherData(processLocation(location), temp, pressure, umbrella);
             weatherRepository.save(weatherData);
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
@@ -80,7 +81,7 @@ public class WeatherService {
 
         if(!validateInput(location)) throw new ValidationException("Bad city name for the request");
 
-        List<WeatherData> lastFiveQueries = new ArrayList<>(weatherRepository.findTop5ByLocationOrderByIdDesc(location));
+        List<WeatherData> lastFiveQueries = new ArrayList<>(weatherRepository.findTop5ByLocationOrderByIdDesc(processLocation(location)));
         if (lastFiveQueries.size() == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No history data found");
         }
@@ -106,6 +107,15 @@ public class WeatherService {
             return false;
         }else{
             return validateInput(loc[0]) && validateInput(loc[1]);
+        }
+    }
+
+    private String processLocation(String location) {
+        String[] loc = location.split(",");
+        if (loc.length == 2) {
+            return loc[0].toLowerCase();
+        }else{
+            return location;
         }
     }
 }
