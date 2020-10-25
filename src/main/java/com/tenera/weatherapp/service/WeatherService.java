@@ -58,6 +58,7 @@ public class WeatherService {
                         HttpStatus.NOT_FOUND, "city not found"
                 );
             }else{
+                System.out.println(e.getMessage());
                 throw new ResponseStatusException(
                         HttpStatus.INTERNAL_SERVER_ERROR, "internal server error"
                 );

@@ -8,8 +8,8 @@ import lombok.Data;
 public class WeatherCondition {
 
     private String main;
-
-    public WeatherCondition(String main) {
-        this.main = main;
-    }
+//
+//    public WeatherCondition(String main) {
+//        this.main = main;
+//    }
 }

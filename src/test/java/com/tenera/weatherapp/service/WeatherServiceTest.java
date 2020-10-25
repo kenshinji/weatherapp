@@ -44,7 +44,8 @@ class WeatherServiceTest {
     public void queryCurrentWeatherWithHappyCase() {
         // GIVEN
         Main main = new Main(10.0, 20.0);
-        WeatherCondition weatherCondition = new WeatherCondition("Rain");
+        WeatherCondition weatherCondition = new WeatherCondition();
+        weatherCondition.setMain("Rain");
         List<WeatherCondition> weather = new ArrayList<>();
         weather.add(weatherCondition);
         OpenWeatherResponse openWeatherResponse = new OpenWeatherResponse(main, weather);
