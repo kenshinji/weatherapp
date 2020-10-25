@@ -4,8 +4,8 @@ import com.tenera.weatherapp.dto.OpenWeatherResponse;
 import com.tenera.weatherapp.dto.WeatherCondition;
 import com.tenera.weatherapp.dto.WeatherData;
 import com.tenera.weatherapp.dto.WeatherHistory;
+import com.tenera.weatherapp.exceptionhandler.ValidationException;
 import com.tenera.weatherapp.repository.WeatherRepository;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -14,10 +14,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 @Service
 public class WeatherService {
@@ -35,14 +35,11 @@ public class WeatherService {
     private WeatherRepository weatherRepository;
 
     public WeatherData queryCurrentWeather(String location) {
-
-        UriComponents builder = UriComponentsBuilder.fromHttpUrl(url)
-                .queryParam("q", location)
-                .queryParam("units", "metric")
-                .queryParam("appid", apiKey).build();
+        if(!validateInput(location)) throw new ValidationException("Bad city name for the request");
+        WeatherData weatherData = null;
         try {
             ResponseEntity<OpenWeatherResponse> response = restTemplate
-                    .getForEntity(builder.toUriString(), OpenWeatherResponse.class);
+                    .getForEntity(url + "?units=metric&appid=" + apiKey + "&q=" + location, OpenWeatherResponse.class);
             double temp = Objects.requireNonNull(response.getBody()).getMain().getTemp();
             double pressure = response.getBody().getMain().getPressure();
 
@@ -53,10 +50,8 @@ public class WeatherService {
                     .findAny().orElse(null);
 
             boolean umbrella = weatherCondition != null;
-            WeatherData weatherData = new WeatherData(temp, pressure, umbrella);
+            weatherData = new WeatherData(location, temp, pressure, umbrella);
             weatherRepository.save(weatherData);
-
-            return weatherData;
         } catch (Exception e) {
             if (e instanceof HttpClientErrorException.NotFound) {
                 throw new ResponseStatusException(
@@ -64,17 +59,20 @@ public class WeatherService {
                 );
             }else{
                 throw new ResponseStatusException(
-                        HttpStatus.INTERNAL_SERVER_ERROR, "unknown server error"
+                        HttpStatus.INTERNAL_SERVER_ERROR, "internal server error"
                 );
             }
         }
+        return weatherData;
     }
 
     public WeatherHistory queryHistory(String location) {
+        if(!validateInput(location)) throw new ValidationException("Bad city name for the request");
 
-        List<WeatherData> lastFiveQueries = new ArrayList<>(weatherRepository.findTop5ByOrderByIdDesc());
-
-        // TODO: need some exception handling here
+        List<WeatherData> lastFiveQueries = new ArrayList<>(weatherRepository.findTop5ByLocationOrderByIdDesc(location));
+        if (lastFiveQueries.size() == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No history data found");
+        }
 
         // Calculate avg values
         double avgTemp = lastFiveQueries.stream().mapToDouble(WeatherData::getTemp)
@@ -84,5 +82,19 @@ public class WeatherService {
 
         // set all above values to WeatherHistory
         return new WeatherHistory(avgTemp, avgPressure, lastFiveQueries);
+    }
+
+    private boolean validateInput(String location) {
+        // consider location only has letters
+        boolean allLetters = location.chars().allMatch(Character::isLetter);
+        if(allLetters) return true;
+
+        // location consist of city and country
+        String[] loc = location.split(",");
+        if (loc.length != 2) {
+            return false;
+        }else{
+            return validateInput(loc[0]) && validateInput(loc[1]);
+        }
     }
 }

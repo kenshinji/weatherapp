@@ -6,6 +6,6 @@ import java.util.List;
 
 public interface WeatherRepository extends CrudRepository<WeatherData, Long> {
 
-    List<WeatherData> findTop5ByOrderByIdDesc();
+    List<WeatherData> findTop5ByLocationOrderByIdDesc(String location);
 
 }

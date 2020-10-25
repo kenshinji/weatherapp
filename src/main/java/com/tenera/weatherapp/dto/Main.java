@@ -9,4 +9,10 @@ public class Main {
 
     private double temp;
     private double pressure;
+
+    public Main(double temp, double pressure) {
+        this.temp = temp;
+        this.pressure = pressure;
+    }
+
 }
