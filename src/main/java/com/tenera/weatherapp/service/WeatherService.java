@@ -8,9 +8,12 @@ import com.tenera.weatherapp.repository.WeatherRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -37,24 +40,34 @@ public class WeatherService {
                 .queryParam("q", location)
                 .queryParam("units", "metric")
                 .queryParam("appid", apiKey).build();
-        ResponseEntity<OpenWeatherResponse> response = restTemplate
-                .getForEntity(builder.toUriString(), OpenWeatherResponse.class);
+        try {
+            ResponseEntity<OpenWeatherResponse> response = restTemplate
+                    .getForEntity(builder.toUriString(), OpenWeatherResponse.class);
+            double temp = Objects.requireNonNull(response.getBody()).getMain().getTemp();
+            double pressure = response.getBody().getMain().getPressure();
 
-        // TODO: need some exception handling here
+            WeatherCondition weatherCondition = response.getBody().getWeather()
+                    .stream().filter(w -> w.getMain().equals("Rain")
+                            || w.getMain().equals("Thunderstorm")
+                            || w.getMain().equals("Drizzle"))
+                    .findAny().orElse(null);
 
-        double temp = Objects.requireNonNull(response.getBody()).getMain().getTemp();
-        double pressure = response.getBody().getMain().getPressure();
+            boolean umbrella = weatherCondition != null;
+            WeatherData weatherData = new WeatherData(temp, pressure, umbrella);
+            weatherRepository.save(weatherData);
 
-        WeatherCondition weatherCondition = response.getBody().getWeather()
-                .stream().filter(w -> w.getMain().equals("Rain")
-                        || w.getMain().equals("Thunderstorm")
-                        || w.getMain().equals("Drizzle"))
-                .findAny().orElse(null);
-
-        boolean umbrella = weatherCondition != null;
-        WeatherData weatherData = new WeatherData(temp, pressure, umbrella);
-        weatherRepository.save(weatherData);
-        return weatherData;
+            return weatherData;
+        } catch (Exception e) {
+            if (e instanceof HttpClientErrorException.NotFound) {
+                throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "city not found"
+                );
+            }else{
+                throw new ResponseStatusException(
+                        HttpStatus.INTERNAL_SERVER_ERROR, "unknown server error"
+                );
+            }
+        }
     }
 
     public WeatherHistory queryHistory(String location) {
