@@ -1,9 +1,7 @@
 package com.tenera.weatherapp.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 import java.util.List;
-
 import lombok.Data;
 
 @Data

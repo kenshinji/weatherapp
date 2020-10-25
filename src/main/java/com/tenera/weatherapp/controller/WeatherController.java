@@ -16,11 +16,6 @@ public class WeatherController {
 
     @GetMapping("/current")
     public WeatherData queryCurrentWeather(@RequestParam(value = "location") String location) {
-        // pass the city name to weather API, return either normal response or 404
-
-        // save the query result to db
-
-        // return the response
         return weatherService.queryCurrentWeather(location);
     }
 

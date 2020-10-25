@@ -15,7 +15,6 @@ import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class WeatherService {
@@ -41,6 +40,7 @@ public class WeatherService {
         ResponseEntity<OpenWeatherResponse> response = restTemplate
                 .getForEntity(builder.toUriString(), OpenWeatherResponse.class);
 
+        // TODO: need some exception handling here
 
         double temp = Objects.requireNonNull(response.getBody()).getMain().getTemp();
         double pressure = response.getBody().getMain().getPressure();
@@ -52,15 +52,16 @@ public class WeatherService {
                 .findAny().orElse(null);
 
         boolean umbrella = weatherCondition != null;
-        WeatherData weatherData = new WeatherData(temp,pressure,umbrella);
+        WeatherData weatherData = new WeatherData(temp, pressure, umbrella);
         weatherRepository.save(weatherData);
         return weatherData;
     }
 
     public WeatherHistory queryHistory(String location) {
 
-        List<WeatherData> lastFiveQueries = weatherRepository.findTop5ByOrderByIdDesc()
-                .stream().collect(Collectors.toList());
+        List<WeatherData> lastFiveQueries = new ArrayList<>(weatherRepository.findTop5ByOrderByIdDesc());
+
+        // TODO: need some exception handling here
 
         // Calculate avg values
         double avgTemp = lastFiveQueries.stream().mapToDouble(WeatherData::getTemp)
