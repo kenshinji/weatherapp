@@ -1,6 +1,6 @@
 package com.tenera.weatherapp.controller;
 
-import com.tenera.weatherapp.dto.Weather;
+import com.tenera.weatherapp.dto.WeatherData;
 import com.tenera.weatherapp.dto.WeatherHistory;
 import com.tenera.weatherapp.service.WeatherService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,9 +15,13 @@ public class WeatherController {
     private WeatherService weatherService;
 
     @GetMapping("/current")
-    public Weather queryCurrentWeather(@RequestParam(value = "location") String location) {
+    public WeatherData queryCurrentWeather(@RequestParam(value = "location") String location) {
         // pass the city name to weather API, return either normal response or 404
-        return new Weather();
+
+        // save the query result to db
+
+        // return the response
+        return weatherService.queryCurrentWeather(location);
     }
 
     @GetMapping("/history")
