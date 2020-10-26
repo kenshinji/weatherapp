@@ -83,7 +83,7 @@ public class WeatherService {
 
         List<WeatherData> lastFiveQueries = new ArrayList<>(weatherRepository.findTop5ByLocationOrderByIdDesc(processLocation(location)));
         if (lastFiveQueries.size() == 0) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No history data found");
+            return new WeatherHistory(0.0, 0.0, lastFiveQueries);
         }
 
         // Calculate avg values

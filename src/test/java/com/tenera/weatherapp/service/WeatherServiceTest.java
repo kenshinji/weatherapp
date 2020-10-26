@@ -10,7 +10,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -74,11 +73,14 @@ class WeatherServiceTest {
     public void queryHistoryWithEmptyResponse() {
         // GIVEN
         when(weatherRepository.findTop5ByLocationOrderByIdDesc(anyString())).thenReturn(new ArrayList<>());
+        
+        // WHEN
+        WeatherHistory weatherHistory = weatherService.queryHistory("Berlin");
 
         // THEN
-        assertThrows(ResponseStatusException.class, () -> {
-            weatherService.queryHistory("Berlin");
-        });
+        assertThat(weatherHistory.getAvgTemp()).isEqualTo(0.0);
+        assertThat(weatherHistory.getAvgPressure()).isEqualTo(0.0);
+        assertThat(weatherHistory.getHistory().size()).isEqualTo(0);
     }
 
     @Test
